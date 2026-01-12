@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Users - SAPPHIRE POS</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <h2>💎 SAPPHIRE POS</h2>
+        </div>
+        <div class="navbar-menu">
+            <a href="/dashboard">Dashboard</a>
+            <a href="/pos">Point of Sale</a>
+            <a href="/inventario">Inventory</a>
+            <a href="/reportes">Reports</a>
+            <a href="/usuarios" class="active">Users</a>
+        </div>
+        <div class="navbar-user">
+            <button id="theme-toggle" class="theme-toggle" title="Toggle Dark Mode">🌙</button>
+            <span>👤 {{ session.nombre }}</span>
+            <a href="/logout" class="btn btn-secondary btn-sm">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>👥 User Management</h1>
+            <button id="add-user-btn" class="btn btn-primary">+ Add User</button>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Name</th>
+                                <th>Role</th>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table">
+                            <tr>
+                                <td colspan="6" class="text-center">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal agregar/editar usuario -->
+    <div id="user-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Add User</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="user-form">
+                    <input type="hidden" id="user-id">
+                    
+                    <div class="form-group">
+                        <label for="username">Username *</label>
+                        <input type="text" id="username" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="nombre">Full Name *</label>
+                        <input type="text" id="nombre" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Password * (leave empty to keep current)</label>
+                        <input type="password" id="password">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="rol">Role *</label>
+                        <select id="rol" required>
+                            <option value="admin">Administrator</option>
+                            <option value="cashier">Cashier</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email">
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="cancel-modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const modal = document.getElementById('user-modal');
+        const addUserBtn = document.getElementById('add-user-btn');
+        const closeBtn = modal.querySelector('.close');
+        const cancelBtn = document.getElementById('cancel-modal');
+        const userForm = document.getElementById('user-form');
+        const usersTable = document.getElementById('users-table');
+        const modalTitle = document.getElementById('modal-title');
+
+        let users = [];
+        let editMode = false;
+
+        // Cargar usuarios
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/users');
+                users = await response.json();
+                renderUsers(users);
+            } catch (error) {
+                console.error('Error loading users:', error);
+                usersTable.innerHTML = '<tr><td colspan="6" class="text-center">Error loading users</td></tr>';
+            }
+        }
+
+        // Renderizar tabla
+        function renderUsers(items) {
+            if (items.length === 0) {
+                usersTable.innerHTML = '<tr><td colspan="6" class="text-center">No users registered</td></tr>';
+                return;
+            }
+            
+            usersTable.innerHTML = items.map(u => {
+                const statusBadge = u.activo ? 
+                    '<span style="color: green;">✓ Active</span>' : 
+                    '<span style="color: red;">✗ Inactive</span>';
+                
+                const roleBadge = u.rol === 'admin' ? 
+                    '<strong style="color: #2563eb;">Admin</strong>' : 
+                    '<span>Cashier</span>';
+                
+                return `
+                    <tr>
+                        <td><strong>${u.username}</strong></td>
+                        <td>${u.nombre}</td>
+                        <td>${roleBadge}</td>
+                        <td>${u.email || '-'}</td>
+                        <td>${statusBadge}</td>
+                        <td>
+                            <button class="btn btn-primary btn-sm" onclick="editUser(${u.id})">
+                                ✏️ Edit
+                            </button>
+                            <button class="btn ${u.activo ? 'btn-danger' : 'btn-success'} btn-sm" 
+                                    onclick="toggleUser(${u.id})">
+                                ${u.activo ? '🔒 Deactivate' : '🔓 Activate'}
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Abrir modal agregar
+        addUserBtn.addEventListener('click', () => {
+            editMode = false;
+            modalTitle.textContent = 'Add User';
+            userForm.reset();
+            document.getElementById('user-id').value = '';
+            document.getElementById('username').disabled = false;
+            document.getElementById('password').required = true;
+            modal.style.display = 'flex';
+        });
+
+        // Editar usuario
+        async function editUser(id) {
+            const user = users.find(u => u.id === id);
+            if (!user) return;
+            
+            editMode = true;
+            modalTitle.textContent = 'Edit User';
+            
+            document.getElementById('user-id').value = user.id;
+            document.getElementById('username').value = user.username;
+            document.getElementById('nombre').value = user.nombre;
+            document.getElementById('password').value = '';
+            document.getElementById('password').required = false;
+            document.getElementById('rol').value = user.rol;
+            document.getElementById('email').value = user.email || '';
+            
+            document.getElementById('username').disabled = true;
+            
+            modal.style.display = 'flex';
+        }
+
+        // Toggle usuario
+        async function toggleUser(id) {
+            const user = users.find(u => u.id === id);
+            const action = user.activo ? 'deactivate' : 'activate';
+            
+            if (!confirm(`Are you sure you want to ${action} this user?`)) return;
+            
+            try {
+                const response = await fetch(`/api/users/${id}/toggle`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`User ${action}d successfully`);
+                    loadUsers();
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error toggling user');
+            }
+        }
+
+        // Guardar usuario
+        userForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const userId = document.getElementById('user-id').value;
+            const data = {
+                username: document.getElementById('username').value.trim(),
+                nombre: document.getElementById('nombre').value.trim(),
+                password: document.getElementById('password').value,
+                rol: document.getElementById('rol').value,
+                email: document.getElementById('email').value.trim()
+            };
+            
+            if (!editMode && !data.password) {
+                alert('Password is required for new users');
+                return;
+            }
+            
+            try {
+                let response;
+                
+                if (editMode && userId) {
+                    response = await fetch(`/api/users/${userId}`, {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(data)
+                    });
+                } else {
+                    response = await fetch('/api/users', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(data)
+                    });
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(editMode ? 'User updated' : 'User created successfully');
+                    closeModal();
+                    loadUsers();
+                } else {
+                    alert('Error: ' + result.message);
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error saving user');
+            }
+        });
+
+        // Cerrar modal
+        function closeModal() {
+            modal.style.display = 'none';
+            userForm.reset();
+            document.getElementById('username').disabled = false;
+        }
+
+        closeBtn.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', closeModal);
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+
+        // Cargar usuarios al iniciar
+        loadUsers();
+        
+        // MODO OSCURO
+        const themeToggle = document.getElementById('theme-toggle');
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+        
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+        });
+    </script>
+</body>
+</html>
