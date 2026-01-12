@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Punto de Venta - Sistema POS</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <h2>💎 SAPPHIRE POS</h2>
+        </div>
+        <div class="navbar-menu">
+            <a href="/dashboard">Dashboard</a>
+            <a href="/pos" class="active">Point of Sale</a>
+            {% if session.rol == 'admin' %}
+            <a href="/inventario">Inventory</a>
+            {% endif %}
+            <a href="/reportes">Reports</a>
+            {% if session.rol == 'admin' %}
+            <a href="/usuarios">Users</a>
+            {% endif %}
+        </div>
+        <div class="navbar-user">
+            <button id="theme-toggle" class="theme-toggle" title="Toggle Dark Mode">🌙</button>
+            <span>👤 {{ session.nombre }}</span>
+            <a href="/logout" class="btn btn-secondary btn-sm">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container-fluid pos-container">
+        <div class="pos-layout">
+            <!-- Panel izquierdo - Productos en carrito -->
+            <div class="pos-left">
+                <div class="scan-section">
+                    <h3>🔍 Escanear Producto</h3>
+                    <input 
+                        type="text" 
+                        id="barcode-input" 
+                        placeholder="Escanee el código de barras..." 
+                        autofocus
+                        class="barcode-input">
+                    <p class="scan-hint">El escáner escribirá automáticamente aquí</p>
+                </div>
+
+                <div class="cart-section">
+                    <div class="cart-header">
+                        <h3>🛒 Carrito de Compra</h3>
+                        <button id="clear-cart" class="btn btn-danger btn-sm">Limpiar</button>
+                    </div>
+                    
+                    <div class="cart-items" id="cart-items">
+                        <div class="empty-cart">
+                            <p>🛍️ El carrito está vacío</p>
+                            <p>Escanee un producto para comenzar</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel derecho - Resumen y pago -->
+            <div class="pos-right">
+                <div class="total-section">
+                    <div class="total-row">
+                        <span>Subtotal:</span>
+                        <span id="subtotal-display">$0.00</span>
+                    </div>
+                    <div class="total-row">
+                        <span>VAT (10%):</span>
+                        <span id="itbis-display">$0.00</span>
+                    </div>
+                    <div class="total-row total-final">
+                        <span>TOTAL:</span>
+                        <span id="total-display">$0.00</span>
+                    </div>
+                </div>
+
+                <div class="payment-section">
+                    <h3>💳 Método de Pago</h3>
+                    <div class="payment-methods">
+                        <button class="payment-btn active" data-method="efectivo">
+                            💵 Efectivo
+                        </button>
+                        <button class="payment-btn" data-method="tarjeta">
+                            💳 Tarjeta
+                        </button>
+                        <button class="payment-btn" data-method="transferencia">
+                            🏦 Transferencia
+                        </button>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button id="cancel-btn" class="btn btn-secondary btn-lg btn-block">
+                        ❌ Cancelar Venta
+                    </button>
+                    <button id="checkout-btn" class="btn btn-success btn-lg btn-block" disabled>
+                        ✅ Procesar Venta
+                    </button>
+                </div>
+
+                <div class="quick-info">
+                    <h4>ℹ️ Atajos de teclado:</h4>
+                    <p><kbd>F1</kbd> - Nueva venta</p>
+                    <p><kbd>F2</kbd> - Cancelar</p>
+                    <p><kbd>F3</kbd> - Procesar</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmación -->
+    <div id="success-modal" class="modal">
+        <div class="modal-content success-modal">
+            <div class="modal-header">
+                <h2>✅ ¡Venta Exitosa!</h2>
+            </div>
+            <div class="modal-body">
+                <p class="success-message">Factura: <strong id="factura-number"></strong></p>
+                <p class="success-message">Total: <strong id="factura-total"></strong></p>
+                <p>El recibo ha sido impreso</p>
+            </div>
+            <div class="modal-footer">
+                <button id="nueva-venta-btn" class="btn btn-primary btn-lg">Nueva Venta</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/pos.js') }}"></script>
+    <script>
+        // MODO OSCURO
+        const themeToggle = document.getElementById('theme-toggle');
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+        
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+        });
+    </script>
+</body>
+</html>

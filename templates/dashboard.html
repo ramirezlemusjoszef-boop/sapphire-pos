@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Sistema POS</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <h2>💎 SAPPHIRE POS</h2>
+        </div>
+        <div class="navbar-menu">
+            <a href="/dashboard" class="active">Dashboard</a>
+            <a href="/pos">Point of Sale</a>
+            {% if session.rol == 'admin' %}
+            <a href="/inventario">Inventory</a>
+            {% endif %}
+            <a href="/reportes">Reports</a>
+            {% if session.rol == 'admin' %}
+            <a href="/usuarios">Users</a>
+            {% endif %}
+        </div>
+        <div class="navbar-user">
+            <button id="theme-toggle" class="theme-toggle" title="Toggle Dark Mode">🌙</button>
+            <span>👤 {{ session.nombre }}</span>
+            <a href="/logout" class="btn btn-secondary btn-sm">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>Dashboard</h1>
+            <p>Resumen de ventas del día</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">💰</div>
+                <div class="stat-info">
+                    <h3 id="total-ingresos">$0.00</h3>
+                    <p>Ingresos del Día</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">🧾</div>
+                <div class="stat-info">
+                    <h3 id="total-ventas">0</h3>
+                    <p>Ventas Realizadas</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">📦</div>
+                <div class="stat-info">
+                    <h3 id="subtotal">$0.00</h3>
+                    <p>Subtotal</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">🏛️</div>
+                <div class="stat-info">
+                    <h3 id="total-itbis">$0.00</h3>
+                    <p>VAT Collected</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-grid">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Ventas de Hoy</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Factura</th>
+                                    <th>Hora</th>
+                                    <th>Cajero</th>
+                                    <th>Total</th>
+                                    <th>Método</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ventas-table">
+                                <tr>
+                                    <td colspan="5" class="text-center">Cargando...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3>Productos Más Vendidos</h3>
+                </div>
+                <div class="card-body">
+                    <div id="productos-top">
+                        <p class="text-center">Cargando...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="quick-actions">
+            <h3>Acciones Rápidas</h3>
+            <div class="action-buttons">
+                <a href="/pos" class="btn btn-primary btn-lg">
+                    🛒 Nueva Venta
+                </a>
+                <a href="/inventario" class="btn btn-success btn-lg">
+                    📦 Agregar Producto
+                </a>
+                <a href="/reportes" class="btn btn-info btn-lg">
+                    📊 Ver Reportes
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function cargarEstadisticas() {
+            try {
+                const response = await fetch('/api/estadisticas/hoy');
+                const data = await response.json();
+                
+                document.getElementById('total-ingresos').textContent = `$${data.total_ingresos.toFixed(2)}`;
+                document.getElementById('total-ventas').textContent = data.total_ventas;
+                document.getElementById('subtotal').textContent = `$${data.subtotal.toFixed(2)}`;
+                document.getElementById('total-itbis').textContent = `$${data.total_itbis.toFixed(2)}`;
+                
+                // Productos más vendidos
+                const productosDiv = document.getElementById('productos-top');
+                if (data.productos_top.length > 0) {
+                    productosDiv.innerHTML = data.productos_top.map(p => `
+                        <div class="producto-top-item">
+                            <span class="producto-nombre">${p.nombre}</span>
+                            <span class="producto-cantidad">${p.cantidad_vendida} vendidos</span>
+                        </div>
+                    `).join('');
+                } else {
+                    productosDiv.innerHTML = '<p class="text-center">No hay ventas aún</p>';
+                }
+            } catch (error) {
+                console.error('Error al cargar estadísticas:', error);
+            }
+        }
+
+        async function cargarVentas() {
+            try {
+                const response = await fetch('/api/ventas/hoy');
+                const ventas = await response.json();
+                
+                const tbody = document.getElementById('ventas-table');
+                
+                if (ventas.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center">No hay ventas registradas hoy</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = ventas.map(v => {
+                    const fecha = new Date(v.fecha);
+                    const hora = fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                    
+                    return `
+                        <tr>
+                            <td>${v.numero_factura}</td>
+                            <td>${hora}</td>
+                            <td>${v.cajero}</td>
+                            <td>$${v.total.toFixed(2)}</td>
+                            <td>${v.metodo_pago}</td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error al cargar ventas:', error);
+            }
+        }
+
+        // Cargar datos al iniciar
+        cargarEstadisticas();
+        cargarVentas();
+
+        // Actualizar cada 30 segundos
+        setInterval(() => {
+            cargarEstadisticas();
+            cargarVentas();
+        }, 30000);
+
+        // MODO OSCURO
+        const themeToggle = document.getElementById('theme-toggle');
+        
+        // Aplicar tema guardado al cargar
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+        
+        // Toggle tema
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+        });
+    </script>
+</body>
+</html>
