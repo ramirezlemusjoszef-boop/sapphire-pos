@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Point of Sale - SAPPHIRE POS</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand"><h2>💎 SAPPHIRE POS</h2></div>
+        <div class="navbar-menu">
+            <a href="/dashboard" data-i18n="dashboard">Dashboard</a>
+            <a href="/pos" class="active" data-i18n="pos">Point of Sale</a>
+            {% if session.rol == 'admin' %}<a href="/inventario" data-i18n="inventory">Inventory</a>{% endif %}
+            <a href="/reportes" data-i18n="reports">Reports</a>
+            {% if session.rol == 'admin' %}<a href="/usuarios" data-i18n="users">Users</a>{% endif %}
+            {% if session.rol == 'admin' %}<a href="/settings" data-i18n="settings">Settings</a>{% endif %}
+            {% if session.rol == 'admin' %}<a href="/ventas-admin">Sales Admin</a>{% endif %}
+        </div>
+        <div class="navbar-user">
+            <button id="lang-toggle" class="theme-toggle" title="Language">🌐 EN</button>
+            <button id="theme-toggle" class="theme-toggle" title="Toggle Dark Mode">🌙</button>
+            <span>👤 {{ session.nombre }}</span>
+            <a href="/logout" class="btn btn-secondary btn-sm" data-i18n="logout">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container-fluid pos-container">
+        <div class="pos-layout">
+            <div class="pos-left">
+                <div class="scan-section">
+                    <h3>🔍 <span data-i18n="scan_product">Scan Product</span></h3>
+                    <input type="text" id="barcode-input" placeholder="Scan barcode..." autofocus class="barcode-input">
+                    <p class="scan-hint">Scanner will type here automatically</p>
+                </div>
+                <div class="cart-section">
+                    <div class="cart-header">
+                        <h3>🛒 <span data-i18n="cart">Shopping Cart</span></h3>
+                        <button id="clear-cart" class="btn btn-danger btn-sm" data-i18n="clear">Clear</button>
+                    </div>
+                    <div class="cart-items" id="cart-items">
+                        <div class="empty-cart">
+                            <p>🛍️ <span data-i18n="empty_cart">Cart is empty</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="pos-right">
+                <div class="total-section">
+                    <div class="total-row"><span data-i18n="subtotal">Subtotal:</span><span id="subtotal-display">$0.00</span></div>
+                    <div class="total-row vat-row"><span>VAT (10%):</span><span id="itbis-display">$0.00</span></div>
+                    <div class="total-row total-final"><span data-i18n="total">TOTAL:</span><span id="total-display">$0.00</span></div>
+                </div>
+                <div class="payment-section">
+                    <h3>💳 <span data-i18n="payment_method">Payment Method</span></h3>
+                    <div class="payment-methods">
+                        <button class="payment-btn active" data-method="cash">💵 Cash</button>
+                        <button class="payment-btn" data-method="card">💳 Card</button>
+                        <button class="payment-btn" data-method="transfer">🏦 Transfer</button>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button id="cancel-btn" class="btn btn-secondary btn-lg btn-block">❌ <span data-i18n="cancel">Cancel</span></button>
+                    <button id="checkout-btn" class="btn btn-success btn-lg btn-block" disabled>✅ <span data-i18n="process_sale">Process Sale</span></button>
+                </div>
+                <div class="quick-info">
+                    <h4>ℹ️ Shortcuts:</h4>
+                    <p><kbd>F1</kbd> - Focus | <kbd>F2</kbd> - Cancel | <kbd>F3</kbd> - Process</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="success-modal" class="modal">
+        <div class="modal-content success-modal">
+            <div class="modal-header"><h2>✅ Sale Completed!</h2></div>
+            <div class="modal-body">
+                <p class="success-message">Invoice: <strong id="factura-number"></strong></p>
+                <p class="success-message">Total: <strong id="factura-total"></strong></p>
+                <p>Receipt printed ✓</p>
+            </div>
+            <div class="modal-footer">
+                <button id="nueva-venta-btn" class="btn btn-primary btn-lg">New Sale</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/translations.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/pos.js') }}"></script>
+    <script>
+        const themeToggle = document.getElementById('theme-toggle');
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+        themeToggle.addEventListener('click', () => {
+            const newTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+        });
+        const langToggle = document.getElementById('lang-toggle');
+        let currentLang = localStorage.getItem('language') || 'en';
+        langToggle.textContent = currentLang === 'en' ? '🌐 EN' : '🌐 ES';
+        applyTranslations(currentLang);
+        langToggle.addEventListener('click', () => {
+            currentLang = currentLang === 'en' ? 'es' : 'en';
+            localStorage.setItem('language', currentLang);
+            langToggle.textContent = currentLang === 'en' ? '🌐 EN' : '🌐 ES';
+            applyTranslations(currentLang);
+        });
+    </script>
+</body>
+</html>

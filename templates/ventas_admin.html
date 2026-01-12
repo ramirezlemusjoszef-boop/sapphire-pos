@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Management - SAPPHIRE POS</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand"><h2>💎 SAPPHIRE POS</h2></div>
+        <div class="navbar-menu">
+            <a href="/dashboard">Dashboard</a>
+            <a href="/pos">Point of Sale</a>
+            <a href="/inventario">Inventory</a>
+            <a href="/reportes">Reports</a>
+            <a href="/usuarios">Users</a>
+            <a href="/settings">Settings</a>
+            <a href="/ventas-admin" class="active">Sales Admin</a>
+        </div>
+        <div class="navbar-user">
+            <button id="lang-toggle" class="theme-toggle" title="Language">🌐 EN</button>
+            <button id="theme-toggle" class="theme-toggle" title="Toggle Dark Mode">🌙</button>
+            <span>👤 {{ session.nombre }}</span>
+            <a href="/logout" class="btn btn-secondary btn-sm">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>🗂️ Sales Management</h1>
+            <p>View and delete sales records</p>
+        </div>
+
+        <div class="card" style="margin-bottom: 20px;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h3>⚠️ Danger Zone</h3>
+                <button id="delete-all-btn" class="btn btn-danger">🗑️ Delete ALL Sales</button>
+            </div>
+            <div class="card-body">
+                <p style="color: #ef4444;">Use this to clear all test sales before opening the store. This will restore product stock.</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3>All Sales History</h3>
+                <span id="sales-count">Loading...</span>
+            </div>
+            <div class="card-body">
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Invoice</th>
+                                <th>Date</th>
+                                <th>Cashier</th>
+                                <th>Subtotal</th>
+                                <th>VAT</th>
+                                <th>Total</th>
+                                <th>Payment</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ventas-table">
+                            <tr><td colspan="8" class="text-center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/translations.js') }}"></script>
+    <script>
+        const paymentNames = { cash: 'Cash', card: 'Card', transfer: 'Transfer', efectivo: 'Cash', tarjeta: 'Card', transferencia: 'Transfer' };
+
+        async function cargarVentas() {
+            try {
+                const response = await fetch('/api/sales/all');
+                const ventas = await response.json();
+                
+                document.getElementById('sales-count').textContent = `${ventas.length} sales total`;
+                
+                const tbody = document.getElementById('ventas-table');
+                if (ventas.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center">No sales records</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = ventas.map(v => {
+                    const fecha = new Date(v.fecha);
+                    const fechaStr = fecha.toLocaleDateString('en-US') + ' ' + fecha.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                    const method = paymentNames[v.metodo_pago.toLowerCase()] || v.metodo_pago;
+                    return `
+                        <tr id="sale-${v.id}">
+                            <td>${v.numero_factura}</td>
+                            <td>${fechaStr}</td>
+                            <td>${v.cashier}</td>
+                            <td>$${v.subtotal.toFixed(2)}</td>
+                            <td>$${v.vat.toFixed(2)}</td>
+                            <td><strong>$${v.total.toFixed(2)}</strong></td>
+                            <td>${method}</td>
+                            <td>
+                                <button onclick="deleteSale(${v.id})" class="btn btn-danger btn-sm">🗑️ Delete</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function deleteSale(id) {
+            if (!confirm('Delete this sale? Stock will be restored.')) return;
+            
+            try {
+                const response = await fetch(`/api/sales/${id}`, { method: 'DELETE' });
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById(`sale-${id}`).remove();
+                    cargarVentas();
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (error) {
+                alert('Error deleting sale');
+            }
+        }
+
+        document.getElementById('delete-all-btn').addEventListener('click', async () => {
+            if (!confirm('⚠️ DELETE ALL SALES?\n\nThis will:\n- Remove all sales records\n- Restore all product stock\n\nAre you sure?')) return;
+            if (!confirm('⚠️ FINAL WARNING!\n\nThis cannot be undone. Continue?')) return;
+            
+            try {
+                const response = await fetch('/api/sales/delete-all', { method: 'DELETE' });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ All sales deleted successfully!');
+                    cargarVentas();
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (error) {
+                alert('Error deleting sales');
+            }
+        });
+
+        cargarVentas();
+
+        // Theme
+        const themeToggle = document.getElementById('theme-toggle');
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+        themeToggle.addEventListener('click', () => {
+            const newTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+        });
+
+        // Language
+        const langToggle = document.getElementById('lang-toggle');
+        let currentLang = localStorage.getItem('language') || 'en';
+        langToggle.textContent = currentLang === 'en' ? '🌐 EN' : '🌐 ES';
+        langToggle.addEventListener('click', () => {
+            currentLang = currentLang === 'en' ? 'es' : 'en';
+            localStorage.setItem('language', currentLang);
+            langToggle.textContent = currentLang === 'en' ? '🌐 EN' : '🌐 ES';
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventario - Sistema POS</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <h2>💎 SAPPHIRE POS</h2>
+        </div>
+        <div class="navbar-menu">
+            <a href="/dashboard">Dashboard</a>
+            <a href="/pos">Point of Sale</a>
+            <a href="/inventario" class="active">Inventory</a>
+            <a href="/reportes">Reports</a>
+            <a href="/usuarios">Users</a>
+            <a href="/settings">Settings</a>
+            <a href="/ventas-admin">Sales Admin</a>
+        </div>
+        <div class="navbar-user">
+            <button id="theme-toggle" class="theme-toggle" title="Toggle Dark Mode">🌙</button>
+            <span>👤 {{ session.nombre }}</span>
+            <a href="/logout" class="btn btn-secondary btn-sm">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>📦 Gestión de Inventario</h1>
+            <button id="add-product-btn" class="btn btn-primary">+ Agregar Producto</button>
+        </div>
+
+        <div class="search-section">
+            <input 
+                type="text" 
+                id="search-input" 
+                placeholder="Buscar por nombre, código de barras o categoría..." 
+                class="search-input">
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Producto</th>
+                                <th>Categoría</th>
+                                <th>Precio</th>
+                                <th>Stock</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="products-table">
+                            <tr>
+                                <td colspan="6" class="text-center">Cargando productos...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para agregar/editar producto -->
+    <div id="product-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Agregar Producto</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="product-form">
+                    <input type="hidden" id="product-id">
+                    
+                    <div class="form-group">
+                        <label for="codigo_barra">Código de Barras *</label>
+                        <input type="text" id="codigo_barra" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="nombre">Nombre del Producto *</label>
+                        <input type="text" id="nombre" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="descripcion">Descripción</label>
+                        <textarea id="descripcion" rows="3"></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="precio">Precio de Venta * ($)</label>
+                            <input type="number" id="precio" step="0.01" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="costo">Costo ($)</label>
+                            <input type="number" id="costo" step="0.01">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="cantidad_stock">Stock Inicial *</label>
+                            <input type="number" id="cantidad_stock" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="categoria">Categoría</label>
+                            <select id="categoria">
+                                <option value="Bolsos">Bolsos</option>
+                                <option value="Ropa">Ropa</option>
+                                <option value="Accesorios">Accesorios</option>
+                                <option value="Calzado">Calzado</option>
+                                <option value="Perfumes">Perfumes</option>
+                                <option value="Otros">Otros</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="cancel-modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/inventario.js') }}"></script>
+    <script>
+        // MODO OSCURO
+        const themeToggle = document.getElementById('theme-toggle');
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+        
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+        });
+    </script>
+</body>
+</html>
