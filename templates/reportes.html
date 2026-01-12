@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports - SAPPHIRE POS</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand"><h2>💎 SAPPHIRE POS</h2></div>
+        <div class="navbar-menu">
+            <a href="/dashboard" data-i18n="dashboard">Dashboard</a>
+            <a href="/pos" data-i18n="pos">Point of Sale</a>
+            {% if session.rol == 'admin' %}<a href="/inventario" data-i18n="inventory">Inventory</a>{% endif %}
+            <a href="/reportes" class="active" data-i18n="reports">Reports</a>
+            {% if session.rol == 'admin' %}<a href="/usuarios" data-i18n="users">Users</a>{% endif %}
+            {% if session.rol == 'admin' %}<a href="/settings" data-i18n="settings">Settings</a>{% endif %}
+        </div>
+        <div class="navbar-user">
+            <button id="lang-toggle" class="theme-toggle" title="Language">🌐 EN</button>
+            <button id="theme-toggle" class="theme-toggle" title="Toggle Dark Mode">🌙</button>
+            <span>👤 {{ session.nombre }}</span>
+            <a href="/logout" class="btn btn-secondary btn-sm" data-i18n="logout">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>📊 Reports & Statistics</h1>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">💰</div>
+                <div class="stat-info"><h3 id="total-dia">$0.00</h3><p>Daily Total</p></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🧾</div>
+                <div class="stat-info"><h3 id="num-ventas">0</h3><p>Sales Today</p></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📈</div>
+                <div class="stat-info"><h3 id="ticket-promedio">$0.00</h3><p>Average Ticket</p></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📦</div>
+                <div class="stat-info"><h3 id="productos-vendidos">0</h3><p>Items Sold</p></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3>Today's Sales</h3>
+                <button id="print-report" class="btn btn-secondary btn-sm">🖨️ Print Report</button>
+            </div>
+            <div class="card-body">
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Invoice</th>
+                                <th>Time</th>
+                                <th>Cashier</th>
+                                <th>Subtotal</th>
+                                <th>VAT</th>
+                                <th>Total</th>
+                                <th>Method</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ventas-table">
+                            <tr><td colspan="7" class="text-center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-grid">
+            <div class="card">
+                <div class="card-header"><h3>Top 10 Products</h3></div>
+                <div class="card-body"><div id="top-productos"><p class="text-center">Loading...</p></div></div>
+            </div>
+            <div class="card">
+                <div class="card-header"><h3>Payment Methods</h3></div>
+                <div class="card-body"><div id="metodos-pago"><p class="text-center">Loading...</p></div></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/translations.js') }}"></script>
+    <script>
+        const paymentNames = { cash: 'Cash', card: 'Card', transfer: 'Transfer', efectivo: 'Cash', tarjeta: 'Card', transferencia: 'Transfer' };
+
+        async function cargarReportes() {
+            try {
+                // Estadísticas
+                const statsResponse = await fetch('/api/estadisticas/hoy');
+                const stats = await statsResponse.json();
+                
+                document.getElementById('total-dia').textContent = `$${stats.total_ingresos.toFixed(2)}`;
+                document.getElementById('num-ventas').textContent = stats.total_ventas;
+                
+                const ticketPromedio = stats.total_ventas > 0 ? stats.total_ingresos / stats.total_ventas : 0;
+                document.getElementById('ticket-promedio').textContent = `$${ticketPromedio.toFixed(2)}`;
+
+                // Productos más vendidos
+                const topProductosDiv = document.getElementById('top-productos');
+                if (stats.productos_top && stats.productos_top.length > 0) {
+                    let totalProductos = stats.productos_top.reduce((sum, p) => sum + p.cantidad_vendida, 0);
+                    document.getElementById('productos-vendidos').textContent = totalProductos;
+                    
+                    topProductosDiv.innerHTML = stats.productos_top.map((p, i) => `
+                        <div class="top-producto-item" style="display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid #eee;">
+                            <div><strong>#${i + 1}</strong> ${p.nombre}</div>
+                            <div><strong>${p.cantidad_vendida}</strong> sold</div>
+                        </div>
+                    `).join('');
+                } else {
+                    document.getElementById('productos-vendidos').textContent = '0';
+                    topProductosDiv.innerHTML = '<p class="text-center">No sales yet</p>';
+                }
+
+                // Ventas del día
+                const ventasResponse = await fetch('/api/ventas/hoy');
+                const ventas = await ventasResponse.json();
+                
+                const tbody = document.getElementById('ventas-table');
+                if (ventas.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center">No sales today</td></tr>';
+                } else {
+                    tbody.innerHTML = ventas.map(v => {
+                        const fecha = new Date(v.fecha);
+                        const hora = fecha.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                        const method = paymentNames[v.metodo_pago.toLowerCase()] || v.metodo_pago;
+                        return `
+                            <tr>
+                                <td>${v.numero_factura}</td>
+                                <td>${hora}</td>
+                                <td>${v.cashier}</td>
+                                <td>$${v.subtotal.toFixed(2)}</td>
+                                <td>$${v.vat.toFixed(2)}</td>
+                                <td><strong>$${v.total.toFixed(2)}</strong></td>
+                                <td>${method}</td>
+                            </tr>
+                        `;
+                    }).join('');
+
+                    // Métodos de pago
+                    const metodosPago = {};
+                    ventas.forEach(v => {
+                        const method = paymentNames[v.metodo_pago.toLowerCase()] || v.metodo_pago;
+                        metodosPago[method] = (metodosPago[method] || 0) + v.total;
+                    });
+
+                    const metodosDiv = document.getElementById('metodos-pago');
+                    metodosDiv.innerHTML = Object.entries(metodosPago).map(([metodo, total]) => `
+                        <div style="display:flex;justify-content:space-between;padding:15px;border-bottom:1px solid #eee;">
+                            <span style="font-weight:bold;">${metodo}</span>
+                            <span style="color:#10b981;font-weight:bold;">$${total.toFixed(2)}</span>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading reports:', error);
+            }
+        }
+
+        document.getElementById('print-report').addEventListener('click', () => window.print());
+        cargarReportes();
+        setInterval(cargarReportes, 30000);
+
+        // Theme
+        const themeToggle = document.getElementById('theme-toggle');
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+        themeToggle.addEventListener('click', () => {
+            const newTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+        });
+
+        // Language
+        const langToggle = document.getElementById('lang-toggle');
+        let currentLang = localStorage.getItem('language') || 'en';
+        langToggle.textContent = currentLang === 'en' ? '🌐 EN' : '🌐 ES';
+        applyTranslations(currentLang);
+        langToggle.addEventListener('click', () => {
+            currentLang = currentLang === 'en' ? 'es' : 'en';
+            localStorage.setItem('language', currentLang);
+            langToggle.textContent = currentLang === 'en' ? '🌐 EN' : '🌐 ES';
+            applyTranslations(currentLang);
+        });
+    </script>
+</body>
+</html>
