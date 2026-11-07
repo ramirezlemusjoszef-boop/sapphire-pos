@@ -1,0 +1,18 @@
+# Render Blueprint — New > Blueprint > select this repo
+services:
+  - type: web
+    name: sapphire-pos
+    runtime: python
+    plan: free            # change to "starter" ($7/mo) so it never sleeps
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --workers 1 --threads 8 --timeout 60 --bind 0.0.0.0:$PORT
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: STORE_TZ
+        value: America/Nassau
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false       # paste your Neon (or Render Postgres) connection string

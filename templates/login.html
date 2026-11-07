@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f2a5f">
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <title>SAPPHIRE POS</title>
+  <link rel="stylesheet" href="/static/css/app.css?v={{ version }}">
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="brand" id="brand"></div>
+      <p class="sub" data-i18n="login_sub">Point of sale</p>
+      <form id="login" autocomplete="on">
+        <label class="f"><span data-i18n="username">Username</span>
+          <input class="input" name="username" autocomplete="username" autocapitalize="none" required autofocus>
+        </label>
+        <label class="f"><span data-i18n="password">Password</span>
+          <input class="input" type="password" name="password" autocomplete="current-password" required>
+        </label>
+        <div class="login-err" id="err"></div>
+        <button class="btn btn-primary" type="submit" data-i18n="sign_in">Sign in</button>
+        <button class="btn btn-sm" type="button" id="lang" style="align-self:center" data-i18n="lang">ES</button>
+      </form>
+      <p class="sub small" style="margin:16px 0 0">v{{ version }}</p>
+    </div>
+  </div>
+  <script src="/static/js/common.js?v={{ version }}"></script>
+  <script>
+    $('#brand').innerHTML = ICON.gem + '<span>SAPPHIRE</span>';
+    applyI18n();
+    $('#lang').onclick = toggleLang;
+    $('#login').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const btn = $('button[type=submit]', e.target);
+      btn.disabled = true; $('#err').textContent = '';
+      try {
+        const r = await api('/api/login', { method: 'POST', body: { username: fd.get('username'), password: fd.get('password') } });
+        location.href = r.rol === 'admin' ? '/admin' : '/pos';
+      } catch (er) {
+        $('#err').textContent = er.code === 'bad_credentials' ? t('bad_credentials') : er.message;
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f2a5f">
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <title>Cashier · SAPPHIRE POS</title>
+  <link rel="stylesheet" href="/static/css/app.css?v={{ version }}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand" id="brand"></div>
+    <div class="spacer"></div>
+    <span class="clock" id="clock"></span>
+    <button class="tb-btn" id="btn-today" data-i18n="today_sales">Today's sales</button>
+    {% if user.rol == 'admin' %}<a class="tb-btn" href="/admin" data-i18n="admin_panel">Admin panel</a>{% endif %}
+    <button class="tb-btn" id="btn-lang" data-i18n="lang">ES</button>
+    <div class="who"><b>{{ user.nombre }}</b><br><a href="#" id="btn-pw" style="color:#cfe0ff" data-i18n="change_password">Change password</a></div>
+    <a class="tb-btn" href="/logout" data-i18n="logout">Log out</a>
+  </header>
+
+  <main class="pos">
+    <section class="pos-left">
+      <div class="scanbar">
+        <div class="scan-input-wrap">
+          <span id="scan-icon"></span>
+          <input id="scan" autocomplete="off" autocorrect="off" spellcheck="false" inputmode="text" data-i18n-ph="scan_placeholder">
+        </div>
+        <button class="btn" id="btn-search" style="padding:0 18px"><span data-i18n="search_name">Search by name</span>&nbsp;<kbd>F2</kbd></button>
+      </div>
+      <div class="scan-status" id="scan-status"></div>
+      <div class="card cart" id="cart"></div>
+    </section>
+
+    <aside class="pos-right">
+      <div class="card totals">
+        <div class="tot-row"><span><span data-i18n="subtotal">Subtotal</span> <span class="muted small" id="t-count"></span></span><span id="t-sub">$0.00</span></div>
+        <div class="tot-row disc hidden" id="row-disc"><span data-i18n="discount">Discount</span><span id="t-disc"></span></div>
+        <div class="tot-row" id="row-vat"><span id="t-vat-lbl">VAT</span><span id="t-vat">$0.00</span></div>
+        <div class="grand"><span class="lbl" data-i18n="total">TOTAL</span><span class="amt" id="t-total">$0.00</span></div>
+      </div>
+
+      <div class="pay-methods" id="pay-methods">
+        <button class="pay-btn active" data-m="cash"><span data-icon="cash"></span><span data-i18n="cash">Cash</span></button>
+        <button class="pay-btn" data-m="card"><span data-icon="card"></span><span data-i18n="card">Card</span></button>
+        <button class="pay-btn" data-m="transfer"><span data-icon="transfer"></span><span data-i18n="transfer">Transfer</span></button>
+      </div>
+
+      <div class="card card-b cash-box" id="cash-box">
+        <label class="f"><span data-i18n="cash_received">Cash received</span>
+          <input class="input" id="cash-in" inputmode="decimal" autocomplete="off" placeholder="0.00">
+        </label>
+        <div class="cash-quick" id="cash-quick"></div>
+        <div class="change-row hidden" id="change-row"><span id="change-lbl" data-i18n="change">Change</span><span class="amt" id="change-amt"></span></div>
+      </div>
+
+      <button class="btn btn-ok" id="charge" disabled><span data-i18n="charge">Charge</span>&nbsp;<span id="charge-amt"></span>&nbsp;<kbd>F9</kbd></button>
+      <div class="pos-actions">
+        <button class="btn" id="btn-disc" data-i18n="add_discount">Discount</button>
+        <button class="btn btn-danger" id="btn-clear"><span data-i18n="clear_sale">Clear sale</span>&nbsp;<kbd>Esc</kbd></button>
+      </div>
+      <div class="muted small" style="text-align:center" data-i18n="shortcuts"></div>
+    </aside>
+  </main>
+
+  <aside class="drawer hidden" id="drawer">
+    <div class="drawer-h"><h3 data-i18n="today_sales">Today's sales</h3>
+      <button class="btn btn-sm" id="btn-zreport" data-i18n="end_of_day">Print day report</button>
+      <button class="x" id="drawer-close">×</button></div>
+    <div class="drawer-sum" id="drawer-sum"></div>
+    <div class="drawer-list" id="drawer-list"></div>
+  </aside>
+
+  <script>window.ME = {{ user|tojson }};</script>
+  <script src="/static/vendor/JsBarcode.all.min.js"></script>
+  <script src="/static/js/common.js?v={{ version }}"></script>
+  <script src="/static/js/pos.js?v={{ version }}"></script>
+</body>
+</html>

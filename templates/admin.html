@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f2a5f">
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <title>Admin · SAPPHIRE POS</title>
+  <link rel="stylesheet" href="/static/css/app.css?v={{ version }}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand" id="brand"></div>
+    <div class="spacer"></div>
+    <span class="clock" id="clock"></span>
+    <a class="tb-btn" href="/pos">🛒 <span data-i18n="open_pos">Open cashier</span></a>
+    <button class="tb-btn" id="btn-lang" data-i18n="lang">ES</button>
+    <div class="who"><b>{{ user.nombre }}</b><br><a href="#" id="btn-pw" style="color:#cfe0ff" data-i18n="change_password">Change password</a></div>
+    <a class="tb-btn" href="/logout" data-i18n="logout">Log out</a>
+  </header>
+
+  <div class="admin">
+    <nav class="side" id="side">
+      <button data-tab="dashboard" class="active"><span data-ic="chart"></span><span data-i18n="dashboard">Dashboard</span></button>
+      <button data-tab="products"><span data-ic="box"></span><span data-i18n="products">Products</span></button>
+      <button data-tab="sales"><span data-ic="receipt"></span><span data-i18n="sales">Sales</span></button>
+      <button data-tab="users"><span data-ic="users"></span><span data-i18n="users">Users</span></button>
+      <button data-tab="settings"><span data-ic="gear"></span><span data-i18n="settings">Settings</span></button>
+      <div class="sep"></div>
+      <div class="muted small" style="padding:8px 12px">v{{ version }}</div>
+    </nav>
+    <main class="main" id="main"></main>
+  </div>
+
+  <script>window.ME = {{ user|tojson }};</script>
+  <script src="/static/vendor/JsBarcode.all.min.js"></script>
+  <script src="/static/vendor/chart.umd.js"></script>
+  <script src="/static/js/common.js?v={{ version }}"></script>
+  <script src="/static/js/admin.js?v={{ version }}"></script>
+</body>
+</html>
